@@ -1,4 +1,6 @@
-flask
-flask-cors
 pypdf
 reportlab
+pymupdf
+Pillow
+flask
+flask-cors
