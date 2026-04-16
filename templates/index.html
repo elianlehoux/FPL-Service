@@ -314,6 +314,7 @@
 
             <label>S/ Survival Equipment (marcar = disponible)</label>
             <div class="checkbox-group" style="margin-top:6px; margin-bottom:12px;">
+                <label class="checkbox-item"><input type="checkbox" id="survival_all"> (S) Equipment</label>
                 <label class="checkbox-item"><input type="checkbox" id="survival_polar"> Polar</label>
                 <label class="checkbox-item"><input type="checkbox" id="survival_desert"> Desert</label>
                 <label class="checkbox-item"><input type="checkbox" id="survival_maritime"> Maritime</label>
@@ -322,6 +323,7 @@
 
             <label>J/ Jackets (marcar = disponible)</label>
             <div class="checkbox-group" style="margin-top:6px; margin-bottom:12px;">
+                <label class="checkbox-item"><input type="checkbox" id="jackets_all"> (J) Jackets</label>
                 <label class="checkbox-item"><input type="checkbox" id="jackets_light"> Lights</label>
                 <label class="checkbox-item"><input type="checkbox" id="jackets_fluor"> Fluoresceína</label>
                 <label class="checkbox-item"><input type="checkbox" id="jackets_uhf"> UHF</label>
@@ -344,6 +346,7 @@
                 </div>
             </div>
             <div class="checkbox-group" style="margin-bottom:12px;">
+                <label class="checkbox-item"><input type="checkbox" id="dinghies_all"> (D) Dinghies</label>
                 <label class="checkbox-item"><input type="checkbox" id="dinghies_cover"> Cover</label>
             </div>
             <br>
@@ -355,6 +358,9 @@
                 </div>
                 <div class="field wide">
                     <label>N/ Remarks</label>
+                    <div class="checkbox-group" style="margin-top:4px; margin-bottom:4px;">
+                        <label class="checkbox-item"><input type="checkbox" id="remarks_indicator"> (N) Remarks</label>
+                    </div>
                     <textarea id="remarks" placeholder=""></textarea>
                 </div>
                 <div class="field">
@@ -398,9 +404,9 @@
 
         const CHECKBOX_FIELDS = [
             "radio_uhf", "radio_vhf", "radio_elt",
-            "survival_polar", "survival_desert", "survival_maritime", "survival_jungle",
-            "jackets_light", "jackets_fluor", "jackets_uhf", "jackets_vhf",
-            "dinghies_cover"
+            "survival_all", "survival_polar", "survival_desert", "survival_maritime", "survival_jungle",
+            "jackets_all", "jackets_light", "jackets_fluor", "jackets_uhf", "jackets_vhf",
+            "dinghies_all", "dinghies_cover", "remarks_indicator"
         ];
 
         document.getElementById("submit-btn").addEventListener("click", async () => {

@@ -97,13 +97,31 @@ def fill_pdf(data: dict) -> bytes:
         writer.update_page_form_field_values(writer.pages[0], acroform_values)
 
     # --- Step 2: Draw crossout marks for Casilla 19 checkboxes ---
+    from config import CROSSOUT_GROUPS
+    
     overlay_packet = io.BytesIO()
     overlay_canvas = canvas.Canvas(overlay_packet, pagesize=(page_width, page_height))
+
+    # Automatic Group Logic: If ALL children are False, cross out the Master.
+    # Otherwise, don't cross out the Master (and children will be handled individually).
+    for master_key, sub_keys in CROSSOUT_GROUPS.items():
+        all_false = True
+        for sk in sub_keys:
+            if data.get(sk) is True:
+                all_false = False
+                break
+        
+        # Override or set the master key in data if it's a group indicator
+        if all_false:
+            data[master_key] = False
+        else:
+            data[master_key] = True
 
     has_crossouts = False
     for json_key, coords_list in CROSSOUT_MAP.items():
         # If the key is present and its value is False, draw the crossout
         if json_key in data and data[json_key] is False and coords_list:
+            print(f"DEBUG: Crossing out {json_key} at {coords_list}")
             for coord in coords_list:
                 x = coord["x"]
                 y = coord["y"]
