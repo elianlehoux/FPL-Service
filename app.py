@@ -50,4 +50,6 @@ def api_fill_pdf():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000, host="0.0.0.0")
+    import os
+    # Debug mode only when explicitly requested (never in production).
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1", port=5000, host="0.0.0.0")

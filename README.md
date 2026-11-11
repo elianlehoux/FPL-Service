@@ -1,117 +1,68 @@
-# fpl-pdf-service
+# FPL-Service
 
-Microservicio interno para la generación y aplanamiento automático de planes de vuelo impresos (Formulario OACI FPL).
+Small Python service that fills the Argentine ANAC/ICAO flight plan form (FPL) from JSON and returns a print-ready, flattened PDF.
 
-## 🚀 Uso como Microservicio (HTTP API)
+Filling this form by hand is repetitive and easy to get wrong. Item 19 (supplementary information) is the tricky part: equipment you *don't* carry has to be crossed out, and a group letter (S, J, D) is crossed out only when every item in that group is absent. The service does that automatically.
 
-El servicio expone un único endpoint para recibir los datos del vuelo por POST y devuelve el archivo PDF de forma binaria.
+<img src="docs/example-output.png" alt="Flight plan generated from examples/flight_plan.json" width="420">
 
-1.  **Iniciar el servidor:** 
-    Instala las dependencias y corre la aplicación Flask (recomendado usar Gunicorn para producción):
-    ```bash
-    pip install -r requirements.txt
-    python app.py
-    ```
-    El servidor arrancará en `http://0.0.0.0:5000`.
+*Output for [`examples/flight_plan.json`](examples/flight_plan.json).*
 
-2.  **Llamada a la API:**
-    Envía una petición POST a `/api/fill-pdf` con el payload JSON. El servidor devolverá el archivo como adjunto (ej. `LVABC 15-04-2026.pdf`).
+## What it does
 
-    **Ejemplo en JavaScript/Node:**
-    ```javascript
-    const response = await fetch("http://localhost:5000/api/fill-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(fplData) // Ver formato abajo
-    });
+- Writes each value aligned to its box on the official form template (`FPL_TEMPLATE.pdf`), using the form's own field positions, and flattens the result so it prints the same everywhere.
+- Splits long `route` and `other_info` text across the form's lines.
+- Item 19: a `false` value crosses out that option; group indicators (S, J, D, N) are crossed out automatically when all their options are `false`.
+- Optional signature: a base64 PNG is placed in the signature box.
+- Output file name: `<aircraft id> <date>.pdf`, for example `LVILQ 16-04-2026.pdf`.
 
-    if (response.ok) {
-        const blob = await response.blob();
-        // Guardar o mostrar el PDF
-    }
-    ```
+## Run it
 
-## 📦 Uso como Módulo Python (Integración en tu código)
+Requires Python 3.10+.
 
-Como el programa ahora es 100% modular, podrías mover la carpeta a tu proyecto backend existente y evitar llamar a una API HTTP externa. Solamente importás el módulo central de generación de PDF.
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-**Ejemplo en Python:**
+**HTTP API** (Flask):
+
+```bash
+python app.py   # http://localhost:5000
+curl -X POST http://localhost:5000/api/fill-pdf \
+  -H "Content-Type: application/json" \
+  --data @examples/flight_plan.json -o flight_plan.pdf
+```
+
+Set `FLASK_DEBUG=1` for debug mode. For production, run it behind a WSGI server such as Gunicorn.
+
+**CLI** (JSON on stdin):
+
+```bash
+python cli.py flight_plan.pdf < examples/flight_plan.json
+```
+
+**As a module:**
+
 ```python
-# Importar la función procesadora directamente
-from fpl_service_folder.pdf_service import fill_pdf
-
-# Diccionario con todo el payload (equivalente al JSON de abajo)
-vuelo_data = {
-    "aircraft_id": "LVILQ",
-    "departure_aerodrome": "SAAP",
-    "route": "DCT SAAR",
-    # ... resto de las llaves
-}
-
-# Generar los bytes del PDF en crudo
-pdf_bytes = fill_pdf(vuelo_data)
-
-# Guardar en disco o manejar por cuenta tuya
-with open(f"{vuelo_data['aircraft_id']}.pdf", "wb") as f:
-    f.write(pdf_bytes)
+from pdf_service import fill_pdf
+pdf_bytes = fill_pdf(data)  # data: dict, same shape as the JSON payload
 ```
 
-## 📄 Estructura de Datos (JSON Payload)
+## Payload
 
-El servicio requiere un objeto JSON plano que contenga como llaves los campos del formulario. 
-- Los **Textos/Números** se envían como `strings`.
-- Las **Opciones Extras de Casilla 19** que se deben **TACHAR** se envían como booleanos o nulos. *(Recuerda, el valor False indica que debe aparecer tachado, no marcado).*
-- La firma debe enviarse como una cadena Base64 (PNG con transparencia).
+A flat JSON object. Text and numbers are strings; Item 19 options are booleans (`false` = crossed out). See [`examples/flight_plan.json`](examples/flight_plan.json) for a complete example. The JSON keys and the form fields they map to are in [`config.py`](config.py).
 
-### Esquema de Referencia
+| Group | Keys |
+|---|---|
+| Items 7–18 | `aircraft_id`, `flight_rules`, `type_of_flight`, `number`, `type_of_aircraft`, `wake_turbulence_cat`, `equipment`, `surveillance`, `departure_aerodrome`, `departure_time`, `cruising_speed`, `level`, `route`, `destination_aerodrome`, `total_eet`, `altn_aerodrome`, `altn_aerodrome_2`, `other_info` |
+| Item 19 | `endurance`, `persons_on_board`, `radio_uhf`, `radio_vhf`, `radio_elt`, `survival_polar`, `survival_desert`, `survival_maritime`, `survival_jungle`, `jackets_light`, `jackets_fluor`, `jackets_uhf`, `jackets_vhf`, `dinghies_number`, `dinghies_capacity`, `dinghies_cover`, `dinghies_colour`, `aircraft_colour`, `remarks`, `pilot_in_command` |
+| Filing | `date`, `filed_by`, `signature_image` (data URL, PNG) |
 
-```json
-{
-  "date": "16/04/2026",
-  "aircraft_id": "LVILQ",
-  "flight_rules": "V",
-  "type_of_flight": "G",
-  "number": "1",
-  "type_of_aircraft": "C150",
-  "wake_turbulence_cat": "L",
-  "equipment": "S",
-  "surveillance": "S",
-  "departure_aerodrome": "SAAP",
-  "departure_time": "1400",
-  "cruising_speed": "N0110",
-  "level": "A045",
-  "route": "LOREM IPSUM DCT",
-  "destination_aerodrome": "SAAR",
-  "total_eet": "0130",
-  "altn_aerodrome": "SAAV",
-  "altn_aerodrome_2": "ZZZZ",
-  "other_info": "RMK/ FLIGHT TEST",
-  "endurance": "0400",
-  "persons_on_board": "2",
-  
-  "dinghies_number": "1",
-  "dinghies_capacity": "4",
-  "dinghies_colour": "ORANGE",
-  "aircraft_colour": "WHITE",
-  "remarks": "PPA/12345678",
-  "pilot_in_command": "LEHOUX ELIAN",
-  "filed_by": "LEHOUX ELIAN",
+## Stack
 
-  "signature_image": "data:image/png;base64,iVBORw0KGgoA...",
+Python, Flask, pypdf, ReportLab, PyMuPDF, Pillow.
 
-  "radio_uhf": false,
-  "radio_vhf": false,
-  "radio_elt": false,
-  "survival_polar": false,
-  "survival_desert": false,
-  "survival_maritime": false,
-  "survival_jungle": false,
-  "jackets_light": false,
-  "jackets_fluor": false,
-  "jackets_uhf": false,
-  "jackets_vhf": false,
-  "dinghies_cover": false
-}
-```
+## License
 
-> **Nota Automática de OACI:** No hace falta enviar las llaves maestras como `"survival_all"`, `"jackets_all"`, etc. El microservicio evaluará todos los "survival" (polar, jungle, etc.) y decidirá lógicamente si tacha automáticamente esa casilla.
+MIT. See [LICENSE](LICENSE).
