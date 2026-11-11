@@ -85,7 +85,6 @@ def fill_pdf(data: dict) -> bytes:
     
     # Render flattened text using ReportLab with exact Box Centering alignment
     if found_any:
-        print(f"DEBUG: Rendering PERFECTLY ALIGNED flattened fields...")
         
         # Determine which fields should be left-aligned vs centered
         left_aligned_fields = [
